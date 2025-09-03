@@ -12,44 +12,43 @@ namespace SalesService.Controllers
     public class OrdersController : ControllerBase
     {
         private readonly HttpClient _httpClient;
-        private static List<Order> orders = new List<Order>();
-        private static int nextOrderId = 1;
-        public OrdersController(HttpClient httpClient)
+        private static readonly List<Order> _orders = new List<Order>();
+        private static int _nextOrderId = 1;
+
+        public OrdersController()
         {
-            _httpClient = httpClient;
+            _httpClient = new HttpClient();
         }
-        [httpPost]
+
+        [HttpPost]
         public async Task<IActionResult> CreateOrder([FromBody] OrderDto orderDto)
         {
-            // Checa o estoque no StockService
-            var stockServiceUrl = "http://localhost:5001/api/stock/"; 
+            var stockServiceUrl = "http://localhost:5001/api/stock";
             var response = await _httpClient.GetAsync($"{stockServiceUrl}/{orderDto.ProductId}");
 
-            if (!stockResponse.IsSuccessStatusCode)
+            if (!response.IsSuccessStatusCode)
             {
-                return BadRequest("Produto não encontrado no estoque ou serviço de estoque indisponivel.");
+                return BadRequest("Product not found or stock service unavailable.");
             }
 
-            var stockContent = await stockResponse.Content.ReadAsStringAsync();
-            var product = JsonConvert.DeserializeObject(stockResponse);
+            var stockResponse = await response.Content.ReadAsStringAsync();
+            dynamic stockData = JsonConvert.DeserializeObject(stockResponse);
 
-            if (product.Quantity < orderDto.Quantity)
+            if (stockData.quantity < orderDto.Quantity)
             {
-                return BadRequest("Estoque insuficiente.");
+                return BadRequest("Insufficient stock.");
             }
-
-            // Cria a ordem 
-            var order = new Order
+            
+            var newOrder = new Order
             {
                 Id = _nextOrderId++,
                 ProductId = orderDto.ProductId,
                 Quantity = orderDto.Quantity,
                 OrderDate = System.DateTime.Now,
-                Status = "Confirmado"
+                Status = "Completed"
             };
 
             _orders.Add(newOrder);
-
 
             return Ok(newOrder);
         }

@@ -1,0 +1,9 @@
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.csproj.AssemblyReference.cache
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\rpswa.dswa.cache.json
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.AssemblyInfoInputs.cache
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.AssemblyInfo.cs
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.csproj.CoreCompileInputs.cache
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.MvcApplicationPartsAssemblyInfo.cs
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.MvcApplicationPartsAssemblyInfo.cache
+C:\Users\johna\ECommerceMicroservices\SalesService\obj\Debug\net9.0\SalesService.sourcelink.json

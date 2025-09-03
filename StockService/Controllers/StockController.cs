@@ -15,7 +15,7 @@ namespace StockService.Controllers
             new Product { Id = 2, Name = "Product B", Quantity = 200 }
         };
 
-        [HttpGe("{productId}")]
+        [HttpGet("{productId}")]
 
         public IActionResult GetStock(int productId)
         {

@@ -1,18 +1,42 @@
-using Microsoft.IdentityModel.Tokens.Jwt;
+using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.DependencyInjection;
+using Ocelot.DependencyInjection;
 using Ocelot.Middleware;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // JWT Configuration
-var key = Enconding.ASCII.GetBytes("my_secret_key_12345"); // Chave secreta para assinar o token JWT
+var key = Encoding.ASCII.GetBytes("sua-chave-secreta-muito-forte"); // Substitua por uma chave forte!
 
 builder.Services.AddAuthentication(x =>
-{ 
-    x.DefaultScheme
-}
+{
+    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+})
+.AddJwtBearer(x =>
+{
+    x.RequireHttpsMetadata = false;
+    x.SaveToken = true;
+    x.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuerSigningKey = true,
+        IssuerSigningKey = new SymmetricSecurityKey(key),
+        ValidateIssuer = false,
+        ValidateAudience = false
+    };
+});
 
+builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
 
-)
+// Adiciona o Ocelot e a Autenticação
+builder.Services.AddOcelot();
+
+var app = builder.Build();
+
+// Usa a Autenticação e o Ocelot
+app.UseAuthentication();
+app.UseAuthorization();
+await app.UseOcelot();
+
+app.Run();
