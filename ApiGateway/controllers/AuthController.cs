@@ -1,12 +1,30 @@
 using Microsoft.AspNetCore.Mvc;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
-using Microsoft.IdentityModel.Tokens;
+using ApiGateway.Dtos;
+using ApiGateway.Services; // Adicionado para usar o JwtHelper
 
-[ApiController]
-[Route("api/[controller]")]
-public class AuthController : ControllerBase
-{ 
-    
+namespace ApiGateway.Controllers
+{
+    [ApiController]
+    [Route("api/[controller]")]
+    public class AuthController : ControllerBase
+    {
+        private readonly IConfiguration _config;
+
+        public AuthController(IConfiguration config)
+        {
+            _config = config;
+        }
+
+        [HttpPost]
+        public IActionResult Login([FromBody] LoginDto loginDto)
+        {
+            if (loginDto.Username == "user" && loginDto.Password == "password")
+            {
+                var token = JwtHelper.GenerateToken(_config);
+                return Ok(new { token });
+            }
+
+            return Unauthorized();
+        }
+    }
 }

@@ -1,42 +1,81 @@
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
+// Instalar o pacote: dotnet add package Swashbuckle.AspNetCore
+// Instalar o pacote: dotnet add package Microsoft.AspNetCore.Authentication.JwtBearer
+
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Ocelot.DependencyInjection;
-using Ocelot.Middleware;
+using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi.Models;
+using System.Text;
+using ApiGateway.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// JWT Configuration
-var key = Encoding.ASCII.GetBytes("sua-chave-secreta-muito-forte"); // Substitua por uma chave forte!
-
-builder.Services.AddAuthentication(x =>
+// Adiciona os serviços ao contêiner.
+builder.Services.AddControllers();
+builder.Services.AddSwaggerGen(c =>
 {
-    x.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
-    x.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
-})
-.AddJwtBearer(x =>
-{
-    x.RequireHttpsMetadata = false;
-    x.SaveToken = true;
-    x.TokenValidationParameters = new TokenValidationParameters
+    c.SwaggerDoc("v1", new OpenApiInfo { Title = "ApiGateway", Version = "v1" });
+    c.AddSecurityDefinition("Bearer", new OpenApiSecurityScheme
     {
-        ValidateIssuerSigningKey = true,
-        IssuerSigningKey = new SymmetricSecurityKey(key),
-        ValidateIssuer = false,
-        ValidateAudience = false
-    };
+        In = ParameterLocation.Header,
+        Description = "Insira o JWT com o prefixo Bearer",
+        Name = "Authorization",
+        Type = SecuritySchemeType.ApiKey,
+        Scheme = "Bearer"
+    });
+    c.AddSecurityRequirement(new OpenApiSecurityRequirement
+    {
+        {
+            new OpenApiSecurityScheme
+            {
+                Reference = new OpenApiReference
+                {
+                    Type = ReferenceType.SecurityScheme,
+                    Id = "Bearer"
+                }
+            },
+            new string[] { }
+        }
+    });
 });
 
-builder.Configuration.AddJsonFile("ocelot.json", optional: false, reloadOnChange: true);
+builder.Services.AddScoped<JwtHelper>();
 
-// Adiciona o Ocelot e a Autenticação
-builder.Services.AddOcelot();
+// Configuração do JWT
+var key = Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"] ?? "a-long-and-secure-jwt-key-that-is-at-least-256-bits-long");
+var issuer = builder.Configuration["Jwt:Issuer"];
+var audience = builder.Configuration["Jwt:Audience"];
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+            ValidIssuer = issuer,
+            ValidAudience = audience,
+            IssuerSigningKey = new SymmetricSecurityKey(key)
+        };
+    });
+
+builder.Services.AddAuthorization();
 
 var app = builder.Build();
 
-// Usa a Autenticação e o Ocelot
+// Configura o pipeline de requisições HTTP.
+if (app.Environment.IsDevelopment())
+{
+    app.UseSwagger();
+    app.UseSwaggerUI();
+}
+
+app.UseHttpsRedirection();
+
 app.UseAuthentication();
 app.UseAuthorization();
-await app.UseOcelot();
+
+app.MapControllers();
 
 app.Run();
