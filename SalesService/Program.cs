@@ -1,41 +1,78 @@
+using Microsoft.EntityFrameworkCore;
+using Serilog;
+using SalesService.Data;
+using SalesService.Services;
+
+// Configurar logs para acompanhar as vendas
+Log.Logger = new LoggerConfiguration()
+    .WriteTo.Console()  // Aparece no terminal
+    .WriteTo.File("logs/salesservice-.txt", rollingInterval: RollingInterval.Day)  // Salva em arquivo diário
+    .CreateLogger();
+
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-// Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
-builder.Services.AddOpenApi();
+// Usar logs mais bonitos com Serilog
+builder.Host.UseSerilog();
+
+// Configurar a API de vendas
+builder.Services.AddControllers();
+builder.Services.AddEndpointsApiExplorer();
+builder.Services.AddSwaggerGen(c =>
+{
+    c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo 
+    { 
+        Title = "API de Vendas", 
+        Version = "v1",
+        Description = "Aqui você gerencia todos os pedidos da loja"
+    });
+    // Documentação XML aparece no Swagger se existir
+    c.IncludeXmlComments(Path.Combine(AppContext.BaseDirectory, "SalesService.xml"));
+});
+
+// Configurar banco de dados dos pedidos
+builder.Services.AddDbContext<SalesDbContext>(options =>
+{
+    // Usando banco em memória para facilitar os testes
+    options.UseInMemoryDatabase("SalesDb");
+    
+    // Para usar SQL Server real, descomente:
+    // options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection"));
+});
+
+// HttpClient para conversar com o serviço de estoque
+builder.Services.AddHttpClient<IOrderService, OrderService>();
+
+// Registrar nosso serviço de pedidos
+builder.Services.AddScoped<IOrderService, OrderService>();
+
+// Vai rodar na porta 5000
+builder.WebHost.UseUrls("http://localhost:5000");
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+// Preparar o banco de dados
+using (var scope = app.Services.CreateScope())
+{
+    var context = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
+    context.Database.EnsureCreated();  // Cria as tabelas necessárias
+}
+
+// Configurar como a API vai funcionar
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    // Swagger só em desenvolvimento
+    app.UseSwagger();
+    app.UseSwaggerUI(c =>
+    {
+        c.SwaggerEndpoint("/swagger/v1/swagger.json", "API de Vendas V1");
+        c.RoutePrefix = "swagger";
+    });
 }
 
 app.UseHttpsRedirection();
+app.UseAuthorization();
+app.MapControllers();
 
-var summaries = new[]
-{
-    "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
-};
-
-app.MapGet("/weatherforecast", () =>
-{
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
-        new WeatherForecast
-        (
-            DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
-            Random.Shared.Next(-20, 55),
-            summaries[Random.Shared.Next(summaries.Length)]
-        ))
-        .ToArray();
-    return forecast;
-})
-.WithName("GetWeatherForecast");
+Log.Information("🛒 Serviço de Vendas rodando na porta 5000! Acesse http://localhost:5000/swagger");
 
 app.Run();
-
-record WeatherForecast(DateOnly Date, int TemperatureC, string? Summary)
-{
-    public int TemperatureF => 32 + (int)(TemperatureC / 0.5556);
-}
